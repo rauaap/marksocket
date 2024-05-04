@@ -1,0 +1,148 @@
+#!/usr/bin/env python3
+import socket
+import fcntl
+import os
+import signal
+import json
+import argparse
+import mimetypes
+import markdown
+
+DEFAULT_PORT = 44444
+
+arg_parser = argparse.ArgumentParser(
+    prog = 'marksocket',
+    description = 'Serve markdown documents to the browser with live reload.'
+)
+
+arg_parser.add_argument('markdown_file', help = 'The markdown file to serve.')
+
+arg_parser.add_argument(
+    '-p',
+    '--port',
+    help = f'The port to serve at. Defaults to {DEFAULT_PORT}.',
+    type = int,
+    default = DEFAULT_PORT
+)
+
+arg_parser.add_argument(
+    '-s',
+    '--stylesheet',
+    help = 'Stylesheet to apply to the HTML parsed from the markdown.',
+    action = 'append',
+    default = []
+)
+
+
+args = arg_parser.parse_args()
+watch_dir = os.path.dirname(args.markdown_file) or '.'
+subscribers = []
+css = []
+extensions = ['fenced_code', 'tables', 'toc']
+
+for s in args.stylesheet:
+    with open(s) as f:
+        css.append(f.read())
+
+def get_content(signum = None, frame = None):
+    global html
+
+    with open(args.markdown_file) as f:
+        content = f.read()
+        html = markdown.markdown(content, extensions = extensions)
+
+    for client in subscribers:
+        try:
+            client.send(f'data: {json.dumps({"content": html})}\n\n'.encode())
+        except BrokenPipeError:
+            subscribers.remove(client)
+
+
+def handle(client):
+    request = client.recv(1024)
+    path = request.decode().split('\n')[0].split(' ')[1]
+
+    if path == '/events':
+        subscribers.append(client)
+
+        client.sendall((
+            'HTTP/1.1 200 OK\n'
+            'Cache-Control: no-store\n'
+            'Content-Type: text/event-stream\n\n'
+        ).encode())
+    elif path == '/':
+        client.sendall((
+            'HTTP/1.1 200 OK\n'
+            'Content-Type: text/html\n\n'
+            f'<head><style>{" ".join(css)}</style></head>'
+            f'<body>{html}<body>'
+            '<script>'
+                'const eventSource = new EventSource("/events");'
+                'eventSource.onmessage = (msg) => {'
+                    'document.body.innerHTML = JSON.parse(msg.data).content'
+                '}'
+            '</script>'
+        ).encode())
+
+        client.close()
+    else:
+        file = os.path.join( watch_dir, path.lstrip('/') )
+        mimetype, _ = mimetypes.guess_type(file)
+
+        if not os.path.isfile(file):
+            client.sendall(b'HTTP/1.1 404 Not Found\n\n')
+            client.close()
+            return;
+
+        with open(file, 'rb') as f:
+            client.sendall(
+                b'HTTP/1.1 200 OK\n' +
+                f'Content-Type: {mimetype}\n\n'.encode() +
+                f.read()
+            )
+
+        client.close()
+
+def serve(port):
+    # Initialize content
+    get_content()
+
+    with socket.socket() as s:
+        # Allow reusing the same socket
+        # if the previous one is still in TIME_WAIT state
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.bind(('localhost', port))
+        s.listen()
+
+        print(
+            'Marksocket listening at:\n'
+            f'http://localhost:{port}\n'
+            'Stop with ctrl+c'
+        )
+
+        while True:
+            try:
+                client, _ = s.accept()
+                handle(client)
+            except KeyboardInterrupt:
+                break
+
+
+if __name__ == "__main__":
+    # Get the file descriptor for fcntl
+    fd = os.open(watch_dir,  os.O_RDONLY)
+
+    # Send SIGIO on modify
+    fcntl.fcntl(
+        fd,
+        fcntl.F_NOTIFY,
+        fcntl.DN_MODIFY | fcntl.DN_MULTISHOT
+    )
+
+    # Connect to the signal
+    signal.signal(signal.SIGIO, get_content)
+
+    try:
+        serve(args.port)
+    finally:
+        os.close(fd)
