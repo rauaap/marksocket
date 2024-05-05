@@ -34,19 +34,31 @@ arg_parser.add_argument(
     default = []
 )
 
+arg_parser.add_argument(
+    '-j',
+    '--javascript',
+    help = 'JavaScript file to add to the HTML parsed from the markdown.',
+    action = 'append',
+    default = []
+)
 
 args = arg_parser.parse_args()
 watch_dir = os.path.dirname(args.markdown_file) or '.'
 subscribers = []
 css = []
+js = []
 extensions = ['fenced_code', 'tables', 'toc']
 
-if importlib.util.find_spec(gv := 'markdown_graphviz_svg'):
-    extensions.append(gv)
+if importlib.util.find_spec(mermaid := 'md_mermaid'):
+    extensions.append(mermaid)
 
 for s in args.stylesheet:
     with open(s) as f:
         css.append(f.read())
+
+for j in args.javascript:
+    with open(j) as f:
+        js.append(f.read())
 
 def get_content(signum = None, frame = None):
     global html
@@ -78,7 +90,11 @@ def handle(client):
         client.sendall((
             'HTTP/1.1 200 OK\n'
             'Content-Type: text/html\n\n'
-            f'<head><style>{" ".join(css)}</style></head>'
+            '<head>'
+                '<meta charset="utf-8">'
+                f'<style>{" ".join(css)}</style>'
+                f'<script charset="utf8">{"; ".join(js)}</script>'
+            '</head>'
             f'<body>{html}<body>'
             '<script>'
                 'const eventSource = new EventSource("/events");'
