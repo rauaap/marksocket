@@ -6,6 +6,7 @@ import signal
 import json
 import argparse
 import mimetypes
+import importlib.util
 import markdown
 
 DEFAULT_PORT = 44444
@@ -39,6 +40,9 @@ watch_dir = os.path.dirname(args.markdown_file) or '.'
 subscribers = []
 css = []
 extensions = ['fenced_code', 'tables', 'toc']
+
+if importlib.util.find_spec(gv := 'markdown_graphviz_svg'):
+    extensions.append(gv)
 
 for s in args.stylesheet:
     with open(s) as f:
