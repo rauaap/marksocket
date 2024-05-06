@@ -5,6 +5,7 @@ import os
 import signal
 import json
 import argparse
+import tomllib
 import mimetypes
 import importlib.util
 import markdown
@@ -17,13 +18,13 @@ arg_parser = argparse.ArgumentParser(
 )
 
 arg_parser.add_argument('markdown_file', help = 'The markdown file to serve.')
+arg_parser.add_argument('-c', '--config', help = 'Configuration file.')
 
 arg_parser.add_argument(
     '-p',
     '--port',
     help = f'The port to serve at. Defaults to {DEFAULT_PORT}.',
     type = int,
-    default = DEFAULT_PORT
 )
 
 arg_parser.add_argument(
@@ -43,21 +44,35 @@ arg_parser.add_argument(
 )
 
 args = arg_parser.parse_args()
-watch_dir = os.path.dirname(args.markdown_file) or '.'
-subscribers = []
-css = []
-js = []
-extensions = ['fenced_code', 'tables', 'toc']
+config_file = args.config
+config_path = os.path.expanduser('~/.config/marksocket/config.toml')
 
+if config_file is None and os.path.isfile(config_path):
+    config_file = config_path
+
+if config_file:
+    with open(config_file, 'rb') as f:
+        config = tomllib.load(f)
+else:
+    config = {}
+
+watch_dir = os.path.dirname(args.markdown_file) or '.'
+port = args.port or config.get('port') or DEFAULT_PORT
+subscribers = []
+
+extensions = ['fenced_code', 'tables', 'toc']
 if importlib.util.find_spec(mermaid := 'markdown_mermaid'):
     extensions.append(mermaid)
 
-for s in args.stylesheet:
-    with open(s) as f:
+css = []
+js = []
+
+for s in [*config.get('stylesheet', []), *args.stylesheet]:
+    with open(os.path.expanduser(s)) as f:
         css.append(f.read())
 
-for j in args.javascript:
-    with open(j) as f:
+for j in [*config.get('javascript', []), *args.javascript]:
+    with open(os.path.expanduser(j)) as f:
         js.append(f.read())
 
 def get_content(signum = None, frame = None):
@@ -163,6 +178,6 @@ if __name__ == "__main__":
     signal.signal(signal.SIGIO, get_content)
 
     try:
-        serve(args.port)
+        serve(port)
     finally:
         os.close(fd)

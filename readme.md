@@ -21,7 +21,7 @@ Because people are out there importing entire HTTP servers and 300 npm packages 
 
 ## Usage
 
-`marksocket [-h] [-p PORT] [-s STYLESHEET]... [-j JAVASCRIPT]... markdown_file`
+`marksocket [-h] [-c CONFIG_FILE] [-p PORT] [-s STYLESHEET]... [-j JAVASCRIPT]... markdown_file`
 
 ### Example
 
@@ -30,9 +30,39 @@ Because people are out there importing entire HTTP servers and 300 npm packages 
 ### Options
 
 - -h: Help.
-- -p: The port to serve at. Defaults to 44444.
+- -c: Configuration file.
+- -p: The port to serve at. Command line argument takes precedence over the port specified in the configuration file. Defaults to 44444 if not specified on the command line or in the configuration file.
 - -s: A stylesheet containing css to be inserted in-line into the HTML parsed from the markdown. Multiple stylesheets are inserted in the order they are given on the command line and can be specified like so:<br>`marksocket -s style1.css -s style2.css readme.md`
 - -j: A file containing JavaScript to be inserted in-line into the head tags of the HTML document. Multiple files are inserted in the order they are given on the command line and can be specified like so:<br>`marksocket -j script1.js -j script2.js readme.md`
+
+## Configuration file
+
+Allows specifying the port, stylesheet and javascript options. If the path to a configuration file is not given as a command line argument with the `-c` option, `~/.config/marksocket/config.toml` is looked for one. However both are optional and no configuration file is required to use the program. The command line option takes precedence over the default location, so the default configuration file in `~/.config/marksocket/config.toml` will not be loaded if the configuration file option `-c` is specified.
+
+The configuration file is written in TOML. All values in it are optional. You can specify any or none of them. It has the following schema:
+
+```
+port = int
+javascript = [ str ]
+stylesheet = [ str ]
+```
+
+Example:
+
+```toml
+port = 8000
+javascript = [ 'mermaid.min.js', 'reload-mermaid.js' ]
+stylesheet = [ 'style.css' ]
+```
+
+### Order of the javascript and stylesheet files
+
+Command line options for loading javascript files (`-j`) and stylesheet files (`-s`) can both be used simultaneously with `javascript` and `stylesheet` options in the configuration file. The order the files are loaded in is as follows:
+
+1. JavaScript files specified in the configuration file, in the order they are specified.
+2. JavaScript files specified on the command line, in the order they are specified.
+3. Stylesheet files specified in the configuration file, in the order they are specified.
+4. Stylesheet files specified on the command line, in the order they are specified.
 
 ## Extensions
 
