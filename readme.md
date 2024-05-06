@@ -21,7 +21,7 @@ Because people are out there importing entire HTTP servers and 300 npm packages 
 
 ## Usage
 
-`marksocket [-h] [-p PORT] [-s STYLESHEET]... markdown_file`
+`marksocket [-h] [-p PORT] [-s STYLESHEET]... [-j JAVASCRIPT]... markdown_file`
 
 ### Example
 
