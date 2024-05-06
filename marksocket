@@ -91,6 +91,11 @@ def get_content(signum = None, frame = None):
 
 def handle(client):
     request = client.recv(1024)
+
+    if len(request) == 0:
+        client.close()
+        return
+
     path = request.decode().split('\n')[0].split(' ')[1]
 
     if path == '/events':
