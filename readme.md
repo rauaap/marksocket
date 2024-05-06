@@ -31,4 +31,23 @@ Because people are out there importing entire HTTP servers and 300 npm packages 
 
 - -h: Help.
 - -p: The port to serve at. Defaults to 44444.
-- -s: A stylesheet containing css to be inserted into the HTML parsed from the markdown. Multiple stylesheets are supported like so:<br>`marksocket -s style1.css -s style2.css readme.md`
+- -s: A stylesheet containing css to be inserted in-line into the HTML parsed from the markdown. Multiple stylesheets are inserted in the order they are given on the command line and can be specified like so:<br>`marksocket -s style1.css -s style2.css readme.md`
+- -j: A file containing JavaScript to be inserted in-line into the head tags of the HTML document. Multiple files are inserted in the order they are given on the command line and can be specified like so:<br>`marksocket -j script1.js -j script2.js readme.md`
+
+## Extensions
+
+If the [markdown-mermaid](https://github.com/rauaap/markdown-mermaid) extension is found it is loaded automatically. Note that the extension itself will not render the Mermaid graphs. Include the Mermaid JavaScript library and an additional script that runs Mermaid when the document is reloaded.
+
+### Example
+
+Assume we have downloaded `mermaid.min.js` from a [CDN](https://cdn.jsdelivr.net/npm/mermaid/dist/) and also created a file `reload-mermaid.js` with the following contents:
+
+```javascript
+window.addEventListener('load', () => {
+    const observer = new MutationObserver(() => mermaid.run());
+    observer.observe(document.body, {childList: true});
+});
+```
+
+Now marksocket could be called with said files to enable Mermaid graph rendering:<br>
+`marksocket -j mermaid.min.js -j reload-mermaid.js readme.md`
