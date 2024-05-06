@@ -43,8 +43,23 @@ If the [markdown-mermaid](https://github.com/rauaap/markdown-mermaid) extension 
 Assume we have downloaded `mermaid.min.js` from a [CDN](https://cdn.jsdelivr.net/npm/mermaid/dist/) and also created a file `reload-mermaid.js` with the following contents:
 
 ```javascript
+let scrollPos;
+
+window.addEventListener('scroll', (e) => {
+    // Only save on user initiated scrolls
+    if (!e.isTrusted) {
+        return;
+    }
+
+    scrollPos = window.scrollY;
+});
+
 window.addEventListener('load', () => {
-    const observer = new MutationObserver(() => mermaid.run());
+    const observer = new MutationObserver(async () => {
+        await mermaid.run();
+        window.scrollTo(0, scrollPos);
+    });
+
     observer.observe(document.body, {childList: true});
 });
 ```
