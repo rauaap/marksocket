@@ -49,7 +49,7 @@ css = []
 js = []
 extensions = ['fenced_code', 'tables', 'toc']
 
-if importlib.util.find_spec(mermaid := 'md_mermaid'):
+if importlib.util.find_spec(mermaid := 'markdown_mermaid'):
     extensions.append(mermaid)
 
 for s in args.stylesheet:
