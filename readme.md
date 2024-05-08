@@ -103,7 +103,7 @@ Command line options for loading extensions (`-x`), javascript files (`-j`) and 
 ### Mermaid
 
 ```mermaid
-graph TB
+graph LR
     a(A)
     x{X}
     b(B)
