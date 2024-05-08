@@ -1,6 +1,6 @@
 # Marksocket
 
-![](logo.svg)
+![](logo-light.svg#gh-light-mode-only)![](logo-dark.svg#gh-dark-mode-only)
 
 ## What
 
