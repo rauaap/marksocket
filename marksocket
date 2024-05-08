@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from collections import namedtuple
 import socket
 import fcntl
 import os
@@ -12,92 +13,101 @@ import markdown
 
 DEFAULT_PORT = 44444
 
-arg_parser = argparse.ArgumentParser(
-    prog = 'marksocket',
-    description = 'Serve markdown documents to the browser with live reload.'
-)
+def cli():
+    arg_parser = argparse.ArgumentParser(
+        prog = 'marksocket',
+        description = 'Serve markdown documents to the browser with live reload.'
+    )
 
-arg_parser.add_argument('markdown_file', help = 'The markdown file to serve.')
-arg_parser.add_argument('-c', '--config', help = 'Configuration file.')
+    arg_parser.add_argument('markdown_file', help = 'The markdown file to serve.')
+    arg_parser.add_argument('-c', '--config', help = 'Configuration file.')
 
-arg_parser.add_argument(
-    '-p',
-    '--port',
-    help = f'The port to serve at. Defaults to {DEFAULT_PORT}.',
-    type = int,
-)
+    arg_parser.add_argument(
+        '-p',
+        '--port',
+        help = f'The port to serve at. Defaults to {DEFAULT_PORT}.',
+        type = int,
+    )
 
-arg_parser.add_argument(
-    '-x',
-    '--extension',
-    help = 'Python-Markdown extension to load',
-    action = 'append',
-    default = []
-)
+    arg_parser.add_argument(
+        '-x',
+        '--extension',
+        help = 'Python-Markdown extension to load',
+        action = 'append',
+        default = []
+    )
 
-arg_parser.add_argument(
-    '-s',
-    '--stylesheet',
-    help = 'Stylesheet to apply to the HTML parsed from the markdown.',
-    action = 'append',
-    default = []
-)
+    arg_parser.add_argument(
+        '-s',
+        '--stylesheet',
+        help = 'Stylesheet to apply to the HTML parsed from the markdown.',
+        action = 'append',
+        default = []
+    )
 
-arg_parser.add_argument(
-    '-j',
-    '--javascript',
-    help = 'JavaScript file to add to the HTML parsed from the markdown.',
-    action = 'append',
-    default = []
-)
+    arg_parser.add_argument(
+        '-j',
+        '--javascript',
+        help = 'JavaScript file to add to the HTML parsed from the markdown.',
+        action = 'append',
+        default = []
+    )
 
-args = arg_parser.parse_args()
-config_file = args.config
-config_path = os.path.expanduser('~/.config/marksocket/config.toml')
+    return arg_parser.parse_args()
 
-if config_file is None and os.path.isfile(config_path):
-    config_file = config_path
 
-if config_file:
-    with open(config_file, 'rb') as f:
-        config = tomllib.load(f)
-else:
-    config = {}
+def get_configuration():
+    args = cli()
+    config_file = args.config
+    config_path = os.path.expanduser('~/.config/marksocket/config.toml')
 
-watch_dir = os.path.dirname(args.markdown_file) or '.'
-port = args.port or config.get('port') or DEFAULT_PORT
-subscribers = []
+    if config_file is None and os.path.isfile(config_path):
+        config_file = config_path
 
-extensions = []
-css = []
-js = []
+    if config_file:
+        with open(config_file, 'rb') as f:
+            config = tomllib.load(f)
+    else:
+        config = {}
 
-for x in [*config.get('extension', []), *args.extension]:
-    extensions.append(x)
+    watch_dir = os.path.dirname(markdown_file := args.markdown_file) or '.'
+    port = args.port or config.get('port') or DEFAULT_PORT
 
-for s in [*config.get('stylesheet', []), *args.stylesheet]:
-    with open(os.path.expanduser(s)) as f:
-        css.append(f.read())
+    extensions = []
+    css = []
+    js = []
 
-for j in [*config.get('javascript', []), *args.javascript]:
-    with open(os.path.expanduser(j)) as f:
-        js.append(f.read())
+    for x in [*config.get('extension', []), *args.extension]:
+        extensions.append(x)
 
-def get_content(signum = None, frame = None):
-    global html
+    for s in [*config.get('stylesheet', []), *args.stylesheet]:
+        with open(os.path.expanduser(s)) as f:
+            css.append(f.read())
 
-    with open(args.markdown_file) as f:
+    for j in [*config.get('javascript', []), *args.javascript]:
+        with open(os.path.expanduser(j)) as f:
+            js.append(f.read())
+
+    Configuration = namedtuple('Configuration', [
+        'markdown_file',
+        'watch_dir',
+        'port',
+        'extensions',
+        'js',
+        'css'
+    ])
+
+    return Configuration(markdown_file, watch_dir, port, extensions, js, css)
+
+
+def update_content(markdown_file, extensions):
+    with open(markdown_file) as f:
         content = f.read()
-        html = markdown.markdown(content, extensions = extensions)
 
-    for client in subscribers:
-        try:
-            client.send(f'data: {json.dumps({"content": html})}\n\n'.encode())
-        except BrokenPipeError:
-            subscribers.remove(client)
+    return markdown.markdown(content, extensions = extensions)
 
 
-def handle(client):
+def handle(client, subscribers, configuration):
     request = client.recv(1024)
 
     if len(request) == 0:
@@ -115,26 +125,31 @@ def handle(client):
             'Content-Type: text/event-stream\n\n'
         ).encode())
     elif path == '/':
+        content = update_content(
+            configuration.markdown_file,
+            configuration.extensions
+        )
+
         client.sendall((
             'HTTP/1.1 200 OK\n'
             'Content-Type: text/html\n\n'
             '<head>'
                 '<meta charset="utf-8">'
-                f'<script>{"; ".join(js)}</script>'
-                f'<style>{" ".join(css)}</style>'
+                f'<script>{"; ".join(configuration.js)}</script>'
+                f'<style>{" ".join(configuration.css)}</style>'
             '</head>'
-            f'<body>{html}<body>'
+            f'<body>{content}<body>'
             '<script>'
                 'const eventSource = new EventSource("/events");'
                 'eventSource.onmessage = (msg) => {'
-                    'document.body.innerHTML = JSON.parse(msg.data).content'
+                    'document.body.innerHTML = JSON.parse(msg.data);'
                 '}'
             '</script>'
         ).encode())
 
         client.close()
     else:
-        file = os.path.join( watch_dir, path.lstrip('/') )
+        file = os.path.join( configuration.watch_dir, path.lstrip('/') )
         mimetype, _ = mimetypes.guess_type(file)
 
         if not os.path.isfile(file):
@@ -151,34 +166,47 @@ def handle(client):
 
         client.close()
 
-def serve(port):
-    # Initialize content
-    get_content()
 
+def serve(configuration, subscribers):
     with socket.socket() as s:
         # Allow reusing the same socket
         # if the previous one is still in TIME_WAIT state
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.bind(('localhost', port))
+        s.bind(('localhost', configuration.port))
         s.listen()
 
         print(
             'Marksocket listening at:\n'
-            f'http://localhost:{port}\n'
+            f'http://localhost:{configuration.port}\n'
             'Stop with ctrl+c'
         )
 
         while True:
             try:
                 client, _ = s.accept()
-                handle(client)
+                handle(client, subscribers, configuration)
             except KeyboardInterrupt:
                 break
 
 
-if __name__ == "__main__":
+def main():
+    configuration = get_configuration()
+    subscribers = []
+
+    def notify_subscribers(signum = None, frame = None):
+        html = update_content(
+            configuration.markdown_file,
+            configuration.extensions
+        )
+
+        for client in subscribers:
+            try:
+                client.send(f'data: {json.dumps(html)}\n\n'.encode())
+            except BrokenPipeError:
+                subscribers.remove(client)
+
     # Get the file descriptor for fcntl
-    fd = os.open(watch_dir,  os.O_RDONLY)
+    fd = os.open(configuration.watch_dir,  os.O_RDONLY)
 
     # Send SIGIO on modify
     fcntl.fcntl(
@@ -188,9 +216,12 @@ if __name__ == "__main__":
     )
 
     # Connect to the signal
-    signal.signal(signal.SIGIO, get_content)
+    signal.signal(signal.SIGIO, notify_subscribers)
 
     try:
-        serve(port)
+        serve(configuration, subscribers)
     finally:
         os.close(fd)
+
+if __name__ == "__main__":
+    main()
