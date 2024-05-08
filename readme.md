@@ -142,7 +142,8 @@ window.addEventListener('scroll', (e) => {
     scrollPos = window.scrollY;
 });
 
-window.addEventListener('load', () => {
+mermaid.initialize({theme: 'dark', startOnLoad: true});
+window.addEventListener('load', async () => {
     const observer = new MutationObserver(async () => {
         await mermaid.run();
         window.scrollTo(0, scrollPos);
@@ -151,6 +152,7 @@ window.addEventListener('load', () => {
     observer.observe(document.body, {childList: true});
 });
 ```
+> *A list of available Mermaid themes can be found [here](https://mermaid.js.org/config/theming.html#available-themes).*
 
 Now marksocket could be called with said files to enable Mermaid graph rendering:
 
@@ -180,10 +182,10 @@ An additional dependency [Pygments](https://pygments.org/) is installed. The Mar
 Use Pygments to generate a stylesheet:
 
 ```bash
-pygmentize -S default -f html -a .codehilite > highlights.css
+pygmentize -S github-dark -f html -a .codehilite > highlights.css
 ```
 
-> *More options can be found in the [Pygments documentation](https://pygments.org/docs/)*
+> *More options can be found in the [Pygments documentation](https://pygments.org/docs/) and instructions on how to get a list of available styles can be found [here](https://pygments.org/docs/styles/).*
 
 And then include the codehilite extension with the `-x` flag and the stylesheet that was generated with the `-s` flag:
 
