@@ -28,6 +28,14 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    '-x',
+    '--extension',
+    help = 'Python-Markdown extension to load',
+    action = 'append',
+    default = []
+)
+
+arg_parser.add_argument(
     '-s',
     '--stylesheet',
     help = 'Stylesheet to apply to the HTML parsed from the markdown.',
@@ -60,12 +68,12 @@ watch_dir = os.path.dirname(args.markdown_file) or '.'
 port = args.port or config.get('port') or DEFAULT_PORT
 subscribers = []
 
-extensions = ['fenced_code', 'tables', 'toc']
-if importlib.util.find_spec(mermaid := 'markdown_mermaid'):
-    extensions.append(mermaid)
-
+extensions = []
 css = []
 js = []
+
+for x in [*config.get('extension', []), *args.extension]:
+    extensions.append(x)
 
 for s in [*config.get('stylesheet', []), *args.stylesheet]:
     with open(os.path.expanduser(s)) as f:

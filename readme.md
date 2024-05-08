@@ -32,6 +32,8 @@ Because people are out there importing entire HTTP servers and 300 npm packages 
 - -h: Help.
 - -c: Configuration file.
 - -p: The port to serve at. Command line argument takes precedence over the port specified in the configuration file. Defaults to 44444 if not specified on the command line or in the configuration file.
+- -x: A [Python-Markdown extension](https://python-markdown.github.io/extensions/) to be loaded by the markdown parser. Multiple extensions can be specified like so:<br>
+`marksocket -x fenced_code -x codehilite -x markdown_mermaid readme.md`
 - -s: A stylesheet containing css to be inserted in-line into the HTML parsed from the markdown. Multiple stylesheets are inserted in the order they are given on the command line and can be specified like so:<br>`marksocket -s style1.css -s style2.css readme.md`
 - -j: A file containing JavaScript to be inserted in-line into the head tags of the HTML document. Multiple files are inserted in the order they are given on the command line and can be specified like so:<br>`marksocket -j script1.js -j script2.js readme.md`
 
