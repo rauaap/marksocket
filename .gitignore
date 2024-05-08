@@ -1,0 +1,5 @@
+build
+dist
+env
+marksocket.egg-info
+__pycache__

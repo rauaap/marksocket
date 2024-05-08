@@ -1,0 +1,30 @@
+[project]
+name = "marksocket"
+version = "0.1"
+
+authors = [
+    { name = "rauaap" }
+]
+
+dependencies = [
+    "markdown >= 3.4.1"
+]
+
+requires-python = ">=3.11"
+
+classifiers = [
+    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)"
+]
+
+[project.optional-dependencies]
+mermaid = ["markdown-mermaid >= 0.1"]
+
+[project.scripts]
+marksocket = "marksocket:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project.urls]
+Homepage = 'https://github.com/rauaap/marksocket'
