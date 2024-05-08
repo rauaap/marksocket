@@ -1,6 +1,6 @@
 [project]
 name = "marksocket"
-version = "0.2"
+version = "0.3"
 
 authors = [
     { name = "rauaap" }
@@ -18,6 +18,7 @@ classifiers = [
 
 [project.optional-dependencies]
 mermaid = ["markdown-mermaid >= 0.1"]
+highlights = ["Pygments >= 2.14.0"]
 
 [project.scripts]
 marksocket = "marksocket:main"
