@@ -27,10 +27,10 @@ pip install marksocket
 With Markdown-Extensions:
 
 ```bash
-pip install marksocket[mermaid,highlights]
+pip install marksocket[mermaid,highlights,alerts]
 ```
 
-You can choose any or none of the extensions, mix them as you wish.
+You can choose any or none of the extensions, mix them as you wish. These extensions are covered in [this](#extensions) secion.
 
 ## Usage
 
@@ -123,8 +123,8 @@ pip install marksocket[mermaid]
 
 The Markdown-Python extension [markdown-mermaid](https://github.com/rauaap/markdown-mermaid) is installed. Note that the extension itself will not render the Mermaid graphs. Include the Mermaid JavaScript library and an additional script that runs Mermaid when the document is reloaded.
 
-> [!NOTE]
-> If you're writing a markdown document for Github, it supports the Mermaid syntax out of the box, so once you're done editing your document with Marksocket, it's good to go and no additional work is required. Just push your document and the graphs will be rendered on Github too!
+> [!TIP]
+> If you're writing a markdown document for Github, it supports the Mermaid syntax out of the box. So once you're done editing your document with Marksocket, it's good to go and no additional work is required. Just push your document and the graphs will be rendered on Github too!
 
 #### Configuration
 
@@ -142,7 +142,9 @@ window.addEventListener('scroll', (e) => {
     scrollPos = window.scrollY;
 });
 
+// See the note below about themes
 mermaid.initialize({theme: 'dark', startOnLoad: true});
+
 window.addEventListener('load', async () => {
     const observer = new MutationObserver(async () => {
         await mermaid.run();
@@ -152,12 +154,13 @@ window.addEventListener('load', async () => {
     observer.observe(document.body, {childList: true});
 });
 ```
-> *A list of available Mermaid themes can be found [here](https://mermaid.js.org/config/theming.html#available-themes).*
+> [!NOTE]
+> A list of available Mermaid themes can be found [here](https://mermaid.js.org/config/theming.html#available-themes).
 
 Now marksocket could be called with said files to enable Mermaid graph rendering:
 
 ```bash
-marksocket -x markdown_mermaid -j mermaid.min.js -j reload-mermaid.js readme.md`
+marksocket -x markdown_mermaid -j mermaid.min.js -j reload-mermaid.js readme.md
 ```
 
 Or better yet, include it in your configuration file:
@@ -185,9 +188,10 @@ Use Pygments to generate a stylesheet:
 pygmentize -S github-dark -f html -a .codehilite > highlights.css
 ```
 
-> *More options can be found in the [Pygments documentation](https://pygments.org/docs/) and instructions on how to get a list of available styles can be found [here](https://pygments.org/docs/styles/).*
+> [!NOTE]
+> More options can be found in the [Pygments documentation](https://pygments.org/docs/) and instructions on how to get a list of available styles can be found [here](https://pygments.org/docs/styles/).
 
-And then include the codehilite extension with the `-x` flag and the stylesheet that was generated with the `-s` flag:
+And then include the codehilite extension with the `-x` option and the stylesheet that was generated with the `-s` option:
 
 ```bash
 marksocket -x codehilite -x fenced_code -s highlights.css readme.md
@@ -202,3 +206,34 @@ stylesheet = [ 'highlights.css' ]
 
 > [!NOTE]
 > You most likely want the [Fenced Code Blocks extension](https://python-markdown.github.io/extensions/fenced_code_blocks/) too when including code in your documents, which is why it was included in the examples. This extension ships with Python-Markdown so no additional configuration or installations are required.
+
+### Alerts
+
+If the optional dependency `alerts` is specified during installation:
+
+```bash
+pip install marksocket[alerts]
+```
+
+An additional dependency [markdown-github-alerts](https://github.com/rauaap/markdown-github-alerts) is installed. It enables the rendering of Github style alert boxes such as this:
+
+> [!IMPORTANT]
+> Something the reader should pay attention to.
+
+#### Configuration
+
+The alert boxes are not styled and the extension only creates the necessary HTML for them. Github Markdown CSS stylesheets which can be found [here](https://github.com/sindresorhus/github-markdown-css) for example provide the styling you see here for the alert boxes.
+
+After downloading the desired stylesheet, include it with the `-s` option and the extension itself with the `-x` option:
+
+```bash
+marksocket -s github-markdown-dark.css -x markdown_github_alerts readme.md
+```
+
+Or include them in your configuration file:
+
+```TOML
+extension = [ 'markdown_github_alerts' ]
+stylesheet = [ 'github-markdown-dark.css' ]
+```
+
